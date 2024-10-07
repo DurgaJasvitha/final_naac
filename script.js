@@ -1,5 +1,6 @@
 const urlParams = new URLSearchParams(window.location.search);
 const value = urlParams.get('value');
+sessionStorage.setItem('campus',value);
 document.body.style.backgroundImage = `url(image/${value}.jpg)`;
 document.getElementById('headingid').innerHTML ="Amrita NAAC Automation Portal <span style='color: #C30B4D;'>" + value + " Branch </span>" || 'No value selected.';
 
@@ -13,6 +14,7 @@ document.getElementById('signin-form').addEventListener('submit', function(e) {
     console.log(email);
     const password = document.getElementById('password').value;
     const branch =  document.getElementById('branch').value;
+    sessionStorage.setItem('branch', branch);
     console.log(branch);
     
     const messageElement = document.querySelector('.message');

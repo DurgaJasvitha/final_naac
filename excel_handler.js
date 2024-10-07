@@ -371,6 +371,41 @@ function updateSubmitButton(isComplete) {
         submitButton.textContent = 'Incomplete';
     }
 }
+let collectedLinks = [];
+// Function to collect all links (irrespective of Google Drive or not) from the sheets
+function collectAllLinks() {
+    // Retrieve campus and branch from session storage
+    collectedLinks = [];
+    const campus = sessionStorage.getItem('campus');
+    const branch = sessionStorage.getItem('branch');  // Assuming branch is stored during login
+    const criteriaNumber = sessionStorage.getItem('criteriaNumber');
+
+    workbook.SheetNames.forEach(sheetName => {
+        const sheet = workbook.Sheets[sheetName];
+        const data = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+
+        // Iterate over rows in the sheet to find any links (http:// or https://)
+        data.forEach(row => {
+            row.forEach(cell => {
+                const cellValue = (cell || '').toString().trim();
+                const isLink = cellValue.startsWith('http://') || cellValue.startsWith('https://');
+
+                if (isLink) {
+                    // Add the link to the collectedLinks array with metadata
+                    collectedLinks.push({
+                        campus: campus,
+                        branch: branch,
+                        criteria: criteriaNumber,
+                        subCriteria: sheetName,
+                        link: cellValue
+                    });
+                }
+            });
+        });
+    });
+
+    console.log("Collected All Links:", collectedLinks);  // For debugging
+}
 
 // Sync data changes with Handsontable and recheck completion
 function syncDataAndCheckCompletion() {
@@ -408,13 +443,28 @@ function downloadUpdatedExcel() {
     XLSX.writeFile(workbook, 'Updated_Template.xlsx');
 }
 
-// Function to handle the submit button click
-function handleSubmit() {
-    if (!document.getElementById('submitButton').disabled) {
-        alert('Submitted successfully!');
+document.getElementById('submitButton').addEventListener('click', function() {
+    if (!this.disabled) {
+        collectAllLinks();
+        // Send collectedLinks to the backend
+        fetch('http://localhost:5000/download-files', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                collectedLinks: collectedLinks,  // The collected links array
+            }),
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log('Success:', data);
+            alert('Files are being downloaded to the server.');
+        })
+        .catch((error) => {
+            console.error('Error:', error);
+        });
+    } else {
+        alert('Please complete all sheets before submitting.');
     }
-}
-
-const urlParams = new URLSearchParams(window.location.search);
-const value = urlParams.get('value');   
-document.getElementById('headingid').innerHTML = value+" Branch";
+});

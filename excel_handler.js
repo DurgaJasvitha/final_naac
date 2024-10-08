@@ -443,28 +443,40 @@ function downloadUpdatedExcel() {
     XLSX.writeFile(workbook, 'Updated_Template.xlsx');
 }
 
-document.getElementById('submitButton').addEventListener('click', function() {
-    if (!this.disabled) {
-        collectAllLinks();
-        // Send collectedLinks to the backend
-        fetch('http://localhost:5000/download-files', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                collectedLinks: collectedLinks,  // The collected links array
-            }),
-        })
-        .then(response => response.json())
-        .then(data => {
-            console.log('Success:', data);
-            alert('Files are being downloaded to the server.');
-        })
-        .catch((error) => {
-            console.error('Error:', error);
-        });
-    } else {
-        alert('Please complete all sheets before submitting.');
-    }
+document.getElementById('submitButton').addEventListener('click', function(event) {
+    event.preventDefault();  // Prevent the default button action
+
+    console.log("Button clicked, event triggered");
+
+    collectAllLinks();  // Collect links if needed
+
+    console.log("Sending fetch request...");
+
+    fetch('http://localhost:5000/download-files', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+            collectedLinks: collectedLinks,  // The collected links array
+        }),
+    })
+    .then(response => {
+        console.log("Response received:", response);
+        if (!response.ok) {
+            throw new Error('Network response was not ok');  // Handle non-200 responses
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log("Success data:", data);
+        alert('Files are being downloaded to the server.');
+    })
+    .catch((error) => {
+        console.error('Fetch error occurred:', error);
+        alert('An error occurred. Check the console for more details.');
+    });
+
+    console.log("End of function, fetch request sent...");
 });

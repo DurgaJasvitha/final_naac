@@ -67,7 +67,7 @@ def download_file(url, destination_folder, default_name='downloaded_file'):
 # Function to create the directory structure and download files to the OneDrive sync folder
 def download_files_and_store(collected_links):
     # OneDrive sync folder path (adjust the path according to your OneDrive setup)
-    one_drive_sync_folder = os.path.expanduser(r'C:\\Users\\jasvi\\OneDrive\\NAAC')  # Adjust this path as needed
+    one_drive_sync_folder = os.path.expanduser(r'C:\Users\Prahas\OneDrive\NAAC')  # Adjust this path as needed
 
     # Iterate over each link and create the directory structure
     for item in collected_links:

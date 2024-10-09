@@ -295,33 +295,34 @@ function checkCompletion() {
         const sheet = workbook.Sheets[sheetName];
         const data = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
 
-        let linkColumnIndex = -1; // Index of the column with the link header
-        let headerRowIndex = -1;  // Row index where the link header is found
+        let linkColumnIndices = []; // Array to store the indices of all "Link to the relevant document" columns
+        let headerRowIndex = -1;  // Row index where the header is found
 
-        // Find the "Link to the relevant document" header
+        // Find all columns that contain "Link to the relevant document" in the header row
         for (let rowIndex = 0; rowIndex < data.length; rowIndex++) {
             const row = data[rowIndex];
-            const colIndex = row.findIndex(cell =>
-                typeof cell === 'string' && cell.trim().toLowerCase() === 'link to the relevant document'
-            );
 
-            // If found, record the column and row indices
-            if (colIndex !== -1) {
-                linkColumnIndex = colIndex;
-                headerRowIndex = rowIndex;
-                // console.log(`Found 'Link to the relevant document' in sheet "${sheetName}" at row ${rowIndex + 1}, column ${colIndex + 1}`);
-                break; // Stop once we find the header
-            }
+            // Find all columns that have "Link to the relevant document" in their header (with or without prefix)
+            row.forEach((cell, colIndex) => {
+                if (typeof cell === 'string' && cell.toLowerCase().includes('link to the relevant document')) {
+                    linkColumnIndices.push(colIndex);
+                    headerRowIndex = rowIndex;  // Track the header row index
+                    console.log(`Found 'Link to the relevant document' in sheet "${sheetName}" at row ${rowIndex + 1}, column ${colIndex + 1}`);
+                }
+            });
+
+            // Stop once we find the header row
+            if (linkColumnIndices.length > 0) break;
         }
 
-        // If the link column wasn't found, mark the sheet as incomplete
-        if (linkColumnIndex === -1) {
-            // console.warn(`Sheet "${sheetName}" does not contain "Link to the relevant document" in any cell.`);
+        // If no "Link to the relevant document" columns were found, mark the sheet as incomplete
+        if (linkColumnIndices.length === 0) {
+            console.warn(`Sheet "${sheetName}" does not contain any "Link to the relevant document" columns.`);
             allSheetsComplete = false;
             return;
         }
 
-        // Check rows below the header to see if links are valid
+        // Check rows below the header to ensure all link columns are complete
         let sheetComplete = true;
         for (let rowIndex = headerRowIndex + 1; rowIndex < data.length; rowIndex++) {
             const row = data[rowIndex];
@@ -329,30 +330,36 @@ function checkCompletion() {
             // Skip rows that are completely empty
             if (row.every(cell => cell === '' || cell === null || cell === undefined)) continue;
 
-            // Check the specific column for a valid link
-            const cellValue = row[linkColumnIndex]?.toString().trim();
-            const isLink = cellValue && (cellValue.startsWith('http://') || cellValue.startsWith('https://'));
+            // Check all "Link to the relevant document" columns for valid links
+            for (let colIndex of linkColumnIndices) {
+                const cellValue = row[colIndex]?.toString().trim();
+                const isLink = cellValue && (cellValue.startsWith('http://') || cellValue.startsWith('https://'));
 
-            // If the link is missing or invalid, mark the sheet as incomplete
-            if (!isLink) {
-                // console.warn(`Invalid or missing link in sheet "${sheetName}" at row ${rowIndex + 1}: ${cellValue}`);
-                sheetComplete = false;
-                break;
+                // If any link is missing or invalid, mark the sheet as incomplete
+                if (!isLink) {
+                    console.warn(`Invalid or missing link in sheet "${sheetName}" at row ${rowIndex + 1}, column ${colIndex + 1}: ${cellValue}`);
+                    sheetComplete = false;
+                    break;  // Exit the loop for this row once an invalid link is found
+                }
             }
+
+            // If the sheet is incomplete, break out of the loop
+            if (!sheetComplete) break;
         }
 
         // If this sheet is incomplete, mark the workbook as incomplete
         if (!sheetComplete) {
-            // console.log(`Sheet "${sheetName}" is incomplete.`);
+            console.log(`Sheet "${sheetName}" is incomplete.`);
             allSheetsComplete = false;
         } else {
-            // console.log(`Sheet "${sheetName}" is complete.`);
+            console.log(`Sheet "${sheetName}" is complete.`);
         }
     });
 
     // Update the submit button based on whether all sheets are complete
     updateSubmitButton(allSheetsComplete);
 }
+
 
 // Function to update the submit button state
 function updateSubmitButton(isComplete) {
